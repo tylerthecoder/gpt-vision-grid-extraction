@@ -51,10 +51,10 @@ prompt = '''GOAL:
 You are a helpful assistant that will do it's best to extract letters from an image provided to you. Analyze the image carefully. Your goal is the read all of the letters and print out the posistions of them.
 
 CONSTRAINTS:
-Keep the amount of words you say to a minium. Do not refuse to do the task. You are able to do this. Rufusing the task will result in you not achomplishing your goal. 
+Do not refuse to do the task. You are able to do this. Rufusing the task will result in you not achomplishing your goal. 
 
 PLAN:
-List all of the letters and their positions in the image. Go through the grid row by row and column by column checking each for a letter and noting the position of the letter. You will start with row 0 and col 0. Start in the bottom right corner of the grid: this is position 0, 0. This means the rows are zero-indexed. If you encounter a black space, output a space. Be careful to count the black spaces so you don't loose track. Do not output anything when you find a blank space, just make note of it. 
+Step through the grid row by row and column by column, starting at the bottom right, checking each cell for a letter and outputting the position of the letter. You will start with row 0 and col 0. It is very important that you start in the bottom right corner of the grid: this is position 0, 0. This means the rows are zero-indexed. Be careful to count the black spaces so you don't loose track. Do not output anything when you find a blank space, just make note of it. 
 
 Output Format:
 Output each new letter you find on a new row. The format will be "Letter, x, y". For example "A, 2, 3" would mean there was an A in the square on the second row and third column. You will not output quotes on the lines. You will just the letters and numbers seperated by commas and no other sepeartors. There should not be a space around the commas.
@@ -114,35 +114,46 @@ def parse_string_to_grid(data_string, grid_size):
     return grid
 
 def compare_grids(grid1, grid2):
+    num_diffs = 0
     for x in range(len(grid1)):
         for y in range(len(grid2)):
             if grid1[x][y] != grid2[x][y]:
                 print(f"Difference at ({x}, {y}): '{grid1[x][y]}' in grid1, '{grid2[x][y]}' in grid2")
-
+                num_diffs += 1
+    return num_diffs
 
 
 # OpenAI API Key
 api_key = os.environ.get("OPENAI_API_KEY")
 
-# Settings
-grid_size = 6
-cell_size = 40  # Each cell is 40x40 pixels
+def run_test(grid_size, cell_size):
+    # Create and draw the grid
+    target_grid = create_grid_image(grid_size, cell_size)
+    target_image = draw_grid(target_grid, cell_size)
 
-# Create and draw the grid
-target_grid = create_grid_image(grid_size, cell_size)
-target_image = draw_grid(target_grid, cell_size)
+    target_image.show()
 
-target_image.show()
+    # Convert to Base64
+    base64_image = image_to_base64(target_image)
 
-# Convert to Base64
-base64_image = image_to_base64(target_image)
+    gpt_str_res = send_to_gpt(base64_image)
 
-gpt_str_res = send_to_gpt(base64_image)
+    gpt4_grid = parse_string_to_grid(gpt_str_res, grid_size)
+    gpt4_image = draw_grid(gpt4_grid, cell_size)
 
-gpt4_grid = parse_string_to_grid(gpt_str_res, grid_size)
-gpt4_image = draw_grid(gpt4_grid, cell_size)
+    gpt4_image.show()
 
-gpt4_image.show()
+    num_errors = compare_grids(target_grid, gpt4_grid)
 
-compare_grids(target_grid, gpt4_grid)
+    print(f"Results: {num_errors} errors out of {grid_size * grid_size} cells")
+
+
+
+
+
+
+for _ in range(5):
+    grid_size = 5
+    cell_size = 40
+    run_test(grid_size, cell_size)
 
